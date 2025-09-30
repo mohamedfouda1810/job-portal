@@ -17,19 +17,26 @@ const app = express();
 // Middleware to handle CORS
 app.use(
   cors({
-    origin: 'http://localhost:5173',
+    origin: process.env.FRONTEND_URL || '*',
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization']
   })
 );
+app.use((req, res, next) => {
+  res.setHeader(
+    "Content-Security-Policy",
+    "default-src 'self'; script-src 'self'; worker-src 'self' blob:; connect-src 'self' https://job-portal-meobpm0b9-mohamedfouda1810s-projects.vercel.app;"
+  );
+  next();
+});
 
 // Connect to Database
 connectDB();
 
-// Middleware
+// Middleware to parse JSON
 app.use(express.json());
 
-// Routes
+// API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/jobs', jobRoutes);
@@ -40,6 +47,18 @@ app.use('/api/analytics', analyticsRoutes);
 // Serve uploads folder
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
+// Serve React frontend
+const frontendPath = path.join(__dirname, 'frontend-build');
+app.use(express.static(frontendPath));
+
+app.use((req, res, next) => {
+  if (!req.path.startsWith('/api')) {
+    res.sendFile(path.join(__dirname, 'frontend-build', 'index.html'));
+  } else {
+    next();
+  }
+});
+
 // Start server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server is running on port ${PORT}`));
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
